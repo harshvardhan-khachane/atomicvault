@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import logging
-
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from atomicvault.models import DownloadReason
 
-logger = logging.getLogger(__name__)
+from atomicvault.logger import logger
 
 router = APIRouter()
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -23,7 +22,7 @@ from atomicvault.errors import (
 from fastapi.responses import JSONResponse
 from fastapi import Request
 
-logger = logging.getLogger(__name__)
+from atomicvault.logger import logger
 
 
 def _ensure_bucket(client: Minio, bucket: str) -> None:

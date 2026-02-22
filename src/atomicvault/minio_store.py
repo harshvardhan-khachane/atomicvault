@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
     from typing import BinaryIO
 
-logger = logging.getLogger(__name__)
+from atomicvault.logger import logger
 
 
 class MinioStore:

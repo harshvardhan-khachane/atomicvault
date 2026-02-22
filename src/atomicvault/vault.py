@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, BinaryIO
@@ -17,8 +16,7 @@ if TYPE_CHECKING:
     from typing import Iterator
 
 from atomicvault.errors import FileTooLargeError, InvalidTTLError, StorageError
-
-logger = logging.getLogger(__name__)
+from atomicvault.logger import logger
 
 
 class VaultService:

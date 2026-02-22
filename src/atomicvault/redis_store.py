@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -9,7 +8,7 @@ from atomicvault.models import DownloadReason, DownloadResult, SecretRecord
 if TYPE_CHECKING:
     from redis import Redis
 
-logger = logging.getLogger(__name__)
+from atomicvault.logger import logger
 
 _LUA_DIR = Path(__file__).resolve().parent.parent.parent / "scripts"
 _CLAIM_SCRIPT = (_LUA_DIR / "try_download.lua").read_text()
