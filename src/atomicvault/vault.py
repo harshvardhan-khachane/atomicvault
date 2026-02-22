@@ -16,11 +16,9 @@ from atomicvault.models import (
 if TYPE_CHECKING:
     from typing import Iterator
 
+from atomicvault.errors import FileTooLargeError, InvalidTTLError, StorageError
+
 logger = logging.getLogger(__name__)
-
-
-class InfraError(Exception):
-    """Raised when storage infrastructure fails in an unrecoverable way."""
 
 
 class VaultService:
@@ -46,15 +44,10 @@ class VaultService:
         ttl: int,
     ) -> UploadReceipt:
         if size_bytes > self._max_file_size:
-            raise ValueError(
-                f"File too large: {size_bytes} bytes "
-                f"(max {self._max_file_size} bytes)"
-            )
+            raise FileTooLargeError(size_bytes, self._max_file_size)
 
         if ttl <= 0 or ttl > settings.MAX_TTL_SECONDS:
-            raise ValueError(
-                f"TTL must be between 1 and {settings.MAX_TTL_SECONDS} seconds, got {ttl}"
-            )
+            raise InvalidTTLError(ttl, settings.MAX_TTL_SECONDS)
 
         token = uuid.uuid4().hex
         file_id = uuid.uuid4().hex
@@ -90,7 +83,7 @@ class VaultService:
                     "file_id=%s",
                     file_id,
                 )
-            raise InfraError(
+            raise StorageError(
                 f"redis save failed during upload for token={token}"
             ) from exc
 
@@ -106,7 +99,7 @@ class VaultService:
         file_id = result.file_id
 
         if file_id is None:
-            raise InfraError(
+            raise StorageError(
                 f"redis returned got_it=True but file_id is None "
                 f"for token={token}"
             )
@@ -124,7 +117,7 @@ class VaultService:
                 exc,
             )
             self.destroy(token, file_id)
-            raise InfraError(
+            raise StorageError(
                 f"minio read failed after claim for token={token}"
             ) from exc
 

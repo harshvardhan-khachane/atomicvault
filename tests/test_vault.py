@@ -131,10 +131,12 @@ class TestUpload:
 
         over_limit = 10 * 1024 * 1024 + 1  # 10 MB + 1 byte
 
+        from atomicvault.errors import FileTooLargeError
+
         try:
             vault.upload(io.BytesIO(b"x"), "huge.bin", over_limit, ttl=300)
-            assert False, "should have raised ValueError"
-        except ValueError:
+            assert False, "should have raised FileTooLargeError"
+        except FileTooLargeError:
             pass
 
         # Neither store was touched
@@ -149,7 +151,8 @@ class TestUpload:
         redis = FailingRedisStore()
         minio = FakeMinioStore()
 
-        from atomicvault.vault import InfraError, VaultService
+        from atomicvault.vault import VaultService
+        from atomicvault.errors import StorageError
 
         vault = VaultService(redis, minio)
 
@@ -158,7 +161,7 @@ class TestUpload:
 
         try:
             vault.upload(stream, "doomed.txt", len(content), ttl=300)
-        except InfraError:
+        except StorageError:
             pass
 
         # MinIO blob should have been cleaned up (best-effort undo)
@@ -264,15 +267,16 @@ class TestDownloadFailureModes:
         redis = FakeRedisStore()
         minio = FailingReadMinioStore()
 
-        from atomicvault.vault import InfraError, VaultService
+        from atomicvault.vault import VaultService
+        from atomicvault.errors import StorageError
 
         vault = VaultService(redis, minio)
         receipt, _ = _upload_secret(vault)
 
         try:
             vault.try_download(receipt.token)
-            assert False, "should have raised InfraError"
-        except InfraError:
+            assert False, "should have raised StorageError"
+        except StorageError:
             pass  # expected: minio read failed after claim
 
         # Key assertion: cleanup happened (destroy was called)

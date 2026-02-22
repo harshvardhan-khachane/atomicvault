@@ -6,7 +6,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from atomicvault.models import DownloadReason
-from atomicvault.vault import InfraError
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +21,7 @@ _REASON_TO_RESPONSE: dict[DownloadReason, tuple[int, str]] = {
 async def download_secret(request: Request, token: str):
     vault = request.app.state.vault
 
-    try:
-        result, stream = vault.try_download(token)
-    except InfraError:
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "service unavailable"},
-        )
+    result, stream = vault.try_download(token)
 
     if not result.got_it:
         status, detail = _REASON_TO_RESPONSE.get(

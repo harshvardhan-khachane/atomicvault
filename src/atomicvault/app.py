@@ -14,6 +14,14 @@ from atomicvault.minio_store import MinioStore
 from atomicvault.redis_store import RedisStore
 from atomicvault.routes import api_router
 from atomicvault.vault import VaultService
+from atomicvault.errors import (
+    AtomicVaultError,
+    FileTooLargeError,
+    InvalidTTLError,
+    StorageError,
+)
+from fastapi.responses import JSONResponse
+from fastapi import Request
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +92,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AtomicVault", lifespan=lifespan)
 app.include_router(api_router)
+
+
+@app.exception_handler(FileTooLargeError)
+async def file_too_large_exception_handler(request: Request, exc: FileTooLargeError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(InvalidTTLError)
+async def invalid_ttl_exception_handler(request: Request, exc: InvalidTTLError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(StorageError)
+async def storage_exception_handler(request: Request, exc: StorageError):
+    logger.error("Storage error: %s", exc, exc_info=True)
+    return JSONResponse(status_code=503, content={"detail": "service unavailable"})
+
+
+@app.exception_handler(AtomicVaultError)
+async def atomicvault_exception_handler(request: Request, exc: AtomicVaultError):
+    """Catch-all for any other domain errors we might add later."""
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
