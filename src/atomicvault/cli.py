@@ -3,34 +3,16 @@
 from __future__ import annotations
 
 import base64
-import io
 import os
 import shlex
-import sys
 from pathlib import Path
 
-import httpx
 import typer
 
-from atomicvault.crypto import encrypt_bytes_with_key, decrypt_bytes_with_key
-from atomicvault import settings
-# from atomicvault.crypto import decrypt_bytes_with_key
-# from atomicvault.crypto import encrypt_bytes_with_key
-# from atomicvault.crypto import decrypt_bytes
+from atomicvault.client import AtomicVaultClient, ClientError
 
 app = typer.Typer(name="atomicvault", add_completion=False, invoke_without_command=True)
 
-_CONNECT_TIMEOUT = 5.0
-_READ_TIMEOUT = 60.0
-_TIMEOUT = httpx.Timeout(_READ_TIMEOUT, connect=_CONNECT_TIMEOUT)
-
-
-def _base_url() -> str:
-    return settings.ATOMICVAULT_URL
-
-
-def _encrypt_enabled() -> bool:
-    return settings.ATOMICVAULT_CLIENT_ENCRYPT
 
 _BANNER = (
     "AtomicVault interactive shell\n"
@@ -50,15 +32,6 @@ commands:
 """
 
 
-class _Session:
-    """Mutable session state for the REPL."""
-
-    def __init__(self) -> None:
-        self.url: str = _base_url()
-        self.encrypt: bool = _encrypt_enabled()
-        self.key_b64: str = settings.ATOMICVAULT_CLIENT_KEY_B64
-
-
 def _parse_kv(parts: list[str]) -> dict[str, str]:
     """Extract key=value pairs from token list."""
     kv: dict[str, str] = {}
@@ -69,56 +42,23 @@ def _parse_kv(parts: list[str]) -> dict[str, str]:
     return kv
 
 
-def _repl_put(session: _Session, parts: list[str]) -> None:
+def _repl_put(client: AtomicVaultClient, parts: list[str]) -> None:
     if not parts:
         print("usage: put <path> [ttl=300]")
         return
 
     path = Path(parts[0])
-    if not path.exists():
-        print(f"error: {path} does not exist")
-        return
-    if not path.is_file():
-        print(f"error: {path} is not a file")
-        return
-
     kv = _parse_kv(parts[1:])
     ttl = int(kv.get("ttl", "300"))
 
-    fh = None  # file handle for non-encrypted path
-    if session.encrypt:
-        if not session.key_b64:
-            print("error: encryption enabled but no key set (use 'set key' or 'keygen')")
-            return
-        key = base64.b64decode(session.key_b64)
-        plaintext = path.read_bytes()
-        ciphertext = encrypt_bytes_with_key(key, plaintext)
-        upload_file = (path.name, io.BytesIO(ciphertext), "application/octet-stream")
-    else:
-        fh = open(path, "rb")  # noqa: SIM115
-        upload_file = (path.name, fh, "application/octet-stream")
-
     try:
-        resp = httpx.post(
-            f"{session.url}/secrets",
-            params={"ttl": ttl},
-            files={"file": upload_file},
-            timeout=_TIMEOUT,
-        )
-    except httpx.RequestError as exc:
+        token = client.upload_file(path, ttl)
+        print(token)
+    except ClientError as exc:
         print(f"error: {exc}")
-        return
-    finally:
-        if fh is not None:
-            fh.close()
-
-    if resp.status_code == 201:
-        print(resp.json()["token"])
-    else:
-        _print_resp_error(resp)
 
 
-def _repl_get(session: _Session, parts: list[str]) -> None:
+def _repl_get(client: AtomicVaultClient, parts: list[str]) -> None:
     if not parts:
         print("usage: get <token> out=<path> [key=<b64>]")
         return
@@ -130,75 +70,32 @@ def _repl_get(session: _Session, parts: list[str]) -> None:
         print("error: out=<path> is required")
         return
     out = Path(out_str)
-    
     inline_key = kv.get("key")
-    is_encrypted = session.encrypt or bool(inline_key)
-    active_key_b64 = inline_key
 
-    endpoint = f"{session.url}/secrets/{token}"
-
-    if is_encrypted:
-        if not active_key_b64:
-            print("error: encryption enabled but no key provided. Pass key=<b64> with the get command)")
-            return
-        try:
-            resp = httpx.get(endpoint, timeout=_TIMEOUT)
-        except httpx.RequestError as exc:
-            print(f"error: {exc}")
-            return
-
-        if resp.status_code == 200:
-            try:
-                key = base64.b64decode(active_key_b64)
-                if len(key) != 32:
-                    print(f"error: key must be 32 bytes, got {len(key)}")
-                    return
-            except Exception:
-                print("error: invalid base64 key")
-                return
-                
-            try:
-                plaintext = decrypt_bytes_with_key(key, resp.content)
-            except ValueError as exc:
-                print(f"error: decryption failed — {exc}")
-                return
-            out.write_bytes(plaintext)
-            print(f"saved {out}")
-        else:
-            _print_resp_error(resp)
-    else:
-        try:
-            with httpx.stream("GET", endpoint, timeout=_TIMEOUT) as resp:
-                if resp.status_code == 200:
-                    with open(out, "wb") as fh:
-                        for chunk in resp.iter_bytes():
-                            fh.write(chunk)
-                    print(f"saved {out}") 
-                    return
-                resp.read()
-        except httpx.RequestError as exc:
-            print(f"error: {exc}")
-            return
-        _print_resp_error(resp)  # type: ignore[possibly-unbound]
+    try:
+        client.download_file(token, out, inline_key)
+        print(f"saved {out}")
+    except ClientError as exc:
+        print(f"error: {exc}")
 
 
-def _repl_set(session: _Session, parts: list[str]) -> None:
+def _repl_set(client: AtomicVaultClient, parts: list[str]) -> None:
     if len(parts) < 2:
         print("usage: set url|encrypt|key <value>")
         return
     prop, value = parts[0], parts[1]
     if prop == "url":
-        session.url = value
-        print(f"url = {session.url}")
+        client.url = value
+        print(f"url = {client.url}")
     elif prop == "encrypt":
         if value in ("on", "1", "true"):
-            session.encrypt = True
+            client.encrypt = True
         elif value in ("off", "0", "false"):
-            session.encrypt = False
+            client.encrypt = False
         else:
             print("error: use 'on' or 'off'")
             return
-        print(f"encrypt = {'on' if session.encrypt else 'off'}")
+        print(f"encrypt = {'on' if client.encrypt else 'off'}")
     elif prop == "key":
         try:
             raw = base64.b64decode(value)
@@ -208,30 +105,22 @@ def _repl_set(session: _Session, parts: list[str]) -> None:
         if len(raw) != 32:
             print(f"error: key must be 32 bytes, got {len(raw)}")
             return
-        session.key_b64 = value
+        client.key_b64 = value
         print("key set")
     else:
         print(f"error: unknown property '{prop}'")
 
 
-def _repl_keygen(session: _Session) -> None:
+def _repl_keygen(client: AtomicVaultClient) -> None:
     key = os.urandom(32)
-    session.key_b64 = base64.b64encode(key).decode()
-    print(session.key_b64)
-
-
-def _print_resp_error(resp: httpx.Response) -> None:
-    try:
-        detail = resp.json().get("detail", resp.text)
-    except Exception:
-        detail = resp.text
-    print(f"error ({resp.status_code}): {detail}")
+    client.key_b64 = base64.b64encode(key).decode()
+    print(client.key_b64)
 
 
 def _repl() -> None:
     """Run an interactive REPL loop."""
     print(_BANNER)
-    session = _Session()
+    client = AtomicVaultClient()
 
     while True:
         try:
@@ -256,13 +145,13 @@ def _repl() -> None:
         elif cmd in ("exit", "quit"):
             break
         elif cmd == "set":
-            _repl_set(session, args)
+            _repl_set(client, args)
         elif cmd == "keygen":
-            _repl_keygen(session)
+            _repl_keygen(client)
         elif cmd == "put":
-            _repl_put(session, args)
+            _repl_put(client, args)
         elif cmd == "get":
-            _repl_get(session, args)
+            _repl_get(client, args)
         else:
             print(f"error: unknown command '{cmd}' (type 'help')")
 
