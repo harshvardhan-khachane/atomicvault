@@ -9,7 +9,7 @@ from minio import Minio
 from redis import Redis
 
 from atomicvault.cleanup import janitor_loop
-from atomicvault.config import Settings
+from atomicvault import settings
 from atomicvault.minio_store import MinioStore
 from atomicvault.redis_store import RedisStore
 from atomicvault.routes import api_router
@@ -26,24 +26,22 @@ def _ensure_bucket(client: Minio, bucket: str) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = Settings()
-
-    redis_client = Redis.from_url(settings.redis_url, decode_responses=False)
+    redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=False)
     minio_client = Minio(
-        settings.minio_endpoint,
-        access_key=settings.minio_access_key,
-        secret_key=settings.minio_secret_key,
-        secure=settings.minio_secure,
+        settings.MINIO_ENDPOINT,
+        access_key=settings.MINIO_ACCESS_KEY,
+        secret_key=settings.MINIO_SECRET_KEY,
+        secure=settings.MINIO_SECURE,
     )
 
-    _ensure_bucket(minio_client, settings.minio_bucket)
+    _ensure_bucket(minio_client, settings.MINIO_BUCKET)
 
     redis_store = RedisStore(redis_client)
-    minio_store = MinioStore(minio_client, settings.minio_bucket)
+    minio_store = MinioStore(minio_client, settings.MINIO_BUCKET)
     vault = VaultService(
         redis_store,
         minio_store,
-        max_file_size=settings.max_file_size_bytes,
+        max_file_size=settings.MAX_FILE_SIZE_BYTES,
     )
 
     app.state.settings = settings
@@ -52,13 +50,13 @@ async def lifespan(app: FastAPI):
     app.state.minio_client = minio_client
 
     janitor_task = None
-    if settings.janitor_enabled:
+    if settings.JANITOR_ENABLED:
         janitor_task = asyncio.create_task(
             janitor_loop(
                 redis_store=redis_store,
                 minio_store=minio_store,
-                older_than_seconds=settings.janitor_older_than_seconds,
-                interval_seconds=settings.janitor_interval_seconds,
+                older_than_seconds=settings.JANITOR_OLDER_THAN_SECONDS,
+                interval_seconds=settings.JANITOR_INTERVAL_SECONDS,
                 once=False,
             )
         )

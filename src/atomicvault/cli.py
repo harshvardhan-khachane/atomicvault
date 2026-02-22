@@ -11,7 +11,9 @@ from pathlib import Path
 
 import httpx
 import typer
+
 from atomicvault.crypto import encrypt_bytes_with_key, decrypt_bytes_with_key
+from atomicvault import settings
 # from atomicvault.crypto import decrypt_bytes_with_key
 # from atomicvault.crypto import encrypt_bytes_with_key
 # from atomicvault.crypto import decrypt_bytes
@@ -24,11 +26,11 @@ _TIMEOUT = httpx.Timeout(_READ_TIMEOUT, connect=_CONNECT_TIMEOUT)
 
 
 def _base_url() -> str:
-    return os.environ.get("ATOMICVAULT_URL", "http://localhost:8000")
+    return settings.ATOMICVAULT_URL
 
 
 def _encrypt_enabled() -> bool:
-    return os.environ.get("ATOMICVAULT_CLIENT_ENCRYPT", "0") == "1"
+    return settings.ATOMICVAULT_CLIENT_ENCRYPT
 
 _BANNER = (
     "AtomicVault interactive shell\n"
@@ -54,7 +56,7 @@ class _Session:
     def __init__(self) -> None:
         self.url: str = _base_url()
         self.encrypt: bool = _encrypt_enabled()
-        self.key_b64: str = os.environ.get("ATOMICVAULT_CLIENT_KEY_B64", "")
+        self.key_b64: str = settings.ATOMICVAULT_CLIENT_KEY_B64
 
 
 def _parse_kv(parts: list[str]) -> dict[str, str]:

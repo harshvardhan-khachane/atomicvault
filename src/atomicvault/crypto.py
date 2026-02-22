@@ -10,6 +10,7 @@ import base64
 import os
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from atomicvault import settings
 
 _PREFIX = b"AV1"
 _NONCE_LEN = 12
@@ -18,7 +19,7 @@ _KEY_LEN = 32
 
 def encryption_enabled() -> bool:
     """Return True when the user opted into client-side encryption."""
-    return os.environ.get("ATOMICVAULT_CLIENT_ENCRYPT", "0") == "1"
+    return settings.ATOMICVAULT_CLIENT_ENCRYPT
 
 
 def encrypt_bytes_with_key(key: bytes, plaintext: bytes) -> bytes:

@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, BinaryIO
 
+from atomicvault import settings
 from atomicvault.models import (
     DownloadResult,
     SecretRecord,
@@ -16,8 +17,6 @@ if TYPE_CHECKING:
     from typing import Iterator
 
 logger = logging.getLogger(__name__)
-
-MAX_TTL = 3600  # 1 hour
 
 
 class InfraError(Exception):
@@ -52,9 +51,9 @@ class VaultService:
                 f"(max {self._max_file_size} bytes)"
             )
 
-        if ttl <= 0 or ttl > MAX_TTL:
+        if ttl <= 0 or ttl > settings.MAX_TTL_SECONDS:
             raise ValueError(
-                f"TTL must be between 1 and {MAX_TTL} seconds, got {ttl}"
+                f"TTL must be between 1 and {settings.MAX_TTL_SECONDS} seconds, got {ttl}"
             )
 
         token = uuid.uuid4().hex
