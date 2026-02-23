@@ -10,22 +10,18 @@ from atomicvault.logger import logger
 
 
 class MinioStore:
-    """All MinIO operations for AtomicVault secrets."""
-
     def __init__(self, client, bucket: str, *, chunk_size: int = 64 * 1024) -> None:
         self._client = client
         self._bucket = bucket
         self._chunk_size = chunk_size
 
     def save(self, file_id: str, data_stream: BinaryIO, size_bytes: int) -> None:
-        """Upload a blob. Passes the stream directly — no pre-buffering."""
         if size_bytes < 0:
             raise ValueError(f"size_bytes must be >= 0, got {size_bytes}")
 
         self._client.put_object(self._bucket, file_id, data_stream, size_bytes)
 
     def read(self, file_id: str) -> Iterator[bytes]:
-        """Stream an object in chunks. Always cleans up the response."""
         resp = self._client.get_object(self._bucket, file_id)
         try:
             yield from resp.stream(self._chunk_size)
@@ -41,7 +37,6 @@ class MinioStore:
                 pass
 
     def delete(self, file_id: str) -> None:
-        """Remove an object. Idempotent — swallows not-found errors."""
         try:
             self._client.remove_object(self._bucket, file_id)
         except Exception as exc:
@@ -54,7 +49,6 @@ class MinioStore:
             raise
 
     def list_old_files(self, older_than: datetime) -> list[str]:
-        """Return file_ids of objects older than the given threshold."""
         old: list[str] = []
         for obj in self._client.list_objects(self._bucket, recursive=True):
             name = getattr(obj, "object_name", None) or getattr(obj, "name", None)

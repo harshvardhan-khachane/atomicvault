@@ -21,7 +21,6 @@ class ClientError(Exception):
 
 
 class AtomicVaultClient:
-    """A client to upload and download secrets to the AtomicVault API."""
 
     def __init__(
         self,
@@ -34,11 +33,6 @@ class AtomicVaultClient:
         self.key_b64 = key_b64 or settings.ATOMICVAULT_CLIENT_KEY_B64
 
     def upload_file(self, path: Path, ttl: int = 300) -> str:
-        """Upload a file to the vault, encrypting if configured.
-        
-        Returns the token.
-        Raises ClientError on failure.
-        """
         if not path.exists():
             raise ClientError(f"File not found: {path}")
         if not path.is_file():

@@ -1,14 +1,9 @@
-"""AtomicVault CLI — Typer + httpx thin client."""
-
 from __future__ import annotations
-
+import typer
 import base64
 import os
 import shlex
 from pathlib import Path
-
-import typer
-
 from atomicvault.client import AtomicVaultClient, ClientError
 
 app = typer.Typer(name="atomicvault", add_completion=False, invoke_without_command=True)
@@ -23,7 +18,6 @@ _HELP_TEXT = """\
 commands:
   help                  show this message
   exit / quit           leave the REPL
-  set url <base_url>    set session base URL
   set encrypt on|off    toggle client-side encryption
   set key <b64>         set encryption key (base64)
   keygen                generate a random 32-byte key (sets it too)
@@ -33,7 +27,6 @@ commands:
 
 
 def _parse_kv(parts: list[str]) -> dict[str, str]:
-    """Extract key=value pairs from token list."""
     kv: dict[str, str] = {}
     for p in parts:
         if "=" in p:
@@ -81,13 +74,10 @@ def _repl_get(client: AtomicVaultClient, parts: list[str]) -> None:
 
 def _repl_set(client: AtomicVaultClient, parts: list[str]) -> None:
     if len(parts) < 2:
-        print("usage: set url|encrypt|key <value>")
+        print("usage: set encrypt|key <value>")
         return
     prop, value = parts[0], parts[1]
-    if prop == "url":
-        client.url = value
-        print(f"url = {client.url}")
-    elif prop == "encrypt":
+    if prop == "encrypt":
         if value in ("on", "1", "true"):
             client.encrypt = True
         elif value in ("off", "0", "false"):
@@ -158,7 +148,6 @@ def _repl() -> None:
 
 @app.command()
 def main() -> None:
-    """AtomicVault — one-time secret file sharing."""
     _repl()
 
 

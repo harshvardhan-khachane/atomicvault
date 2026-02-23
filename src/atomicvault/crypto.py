@@ -1,20 +1,17 @@
 """AES-GCM client-side encryption for AtomicVault.
-
 Wire format:  b"AV1" + nonce(12) + ciphertext_with_tag
 Key source:   ATOMICVAULT_CLIENT_KEY_B64 env var (base64 of 32-byte key)
 """
 
 from __future__ import annotations
-
 import base64
 import os
-
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from atomicvault import settings
 
-_PREFIX = b"AV1"
-_NONCE_LEN = 12
-_KEY_LEN = 32
+_PREFIX = settings.CRYPTO_PREFIX
+_NONCE_LEN = settings.CRYPTO_NONCE_LEN
+_KEY_LEN = settings.CRYPTO_KEY_LEN
 
 
 def encryption_enabled() -> bool:
