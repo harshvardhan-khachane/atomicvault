@@ -22,6 +22,7 @@ from atomicvault.errors import (
 from fastapi.responses import JSONResponse
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from atomicvault.logger import logger
 
@@ -123,3 +124,5 @@ async def storage_exception_handler(request: Request, exc: StorageError):
 async def atomicvault_exception_handler(request: Request, exc: AtomicVaultError):
     """Catch-all for any other domain errors we might add later."""
     return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
