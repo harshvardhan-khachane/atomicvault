@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomicVault // CLASSIFIED</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="scanlines"></div>
+    <div class="container">
+
+        <header>
+            <h1 class="glitch" data-text="ATOMIC_VAULT">ATOMIC_VAULT</h1>
+            <div class="status-bar">
+                <span>SYSTEM: <span class="text-green blink">ONLINE</span></span>
+                <span>ENC: <span class="text-green">AES-GCM-256</span></span>
+                <span>ACCESS: <span class="text-red">SECURE</span></span>
+            </div>
+        </header>
+
+        <section class="system-desc">
+            <p><strong>> PROTOCOL_INFO:</strong> ZERO-KNOWLEDGE ENCRYPTION ENABLED. Files are AES-GCM-256 encrypted
+                locally before transmission. The server cannot read your data or decryption key. Payloads are
+                BURN-AFTER-READING and permanently destroyed after one successful extraction.</p>
+        </section>
+
+        <main class="panels">
+            <!-- Upload Panel -->
+            <section class="panel upload-panel">
+                <div class="panel-header">>>> OP_UPLOAD</div>
+                <div class="panel-body">
+                    <p class="instruction">SELECT PAYLOAD FOR ENCRYPTION & SECURE STORAGE</p>
+
+                    <form id="uploadForm">
+                        <div class="form-group file-input-wrapper">
+                            <input type="file" id="fileInput" name="file" required>
+                            <label for="fileInput" class="file-label">
+                                <span class="file-icon">[+]</span> <span id="fileNameDisplay">CHOOSE_FILE</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ttlInput">TTL_SECONDS:</label>
+                            <input type="number" id="ttlInput" name="ttl" value="300" min="1" max="86400">
+                        </div>
+
+                        <button type="submit" class="btn action-btn bg-green">INITIATE_UPLOAD</button>
+                    </form>
+
+                    <div id="uploadResult" class="result-box hidden">
+                        <div class="result-label">TOKEN:</div>
+                        <input type="text" id="resultToken" readonly class="selectable">
+                        <div class="result-label">DECRYPTION_KEY:</div>
+                        <input type="text" id="resultKey" readonly class="selectable text-red">
+                        <p class="warning blink">>> WARNING: STORE KEY. CANNOT BE RECOVERED. <<< /p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Download Panel -->
+            <section class="panel download-panel">
+                <div class="panel-header">>>> OP_DOWNLOAD</div>
+                <div class="panel-body">
+                    <p class="instruction">PROVIDE CREDENTIALS FOR PAYLOAD RETRIEVAL</p>
+
+                    <form id="downloadForm">
+                        <div class="form-group">
+                            <label for="tokenInput">TOKEN:</label>
+                            <input type="text" id="tokenInput" placeholder="ENTER_TOKEN_ID" required autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="keyInput">DECRYPTION_KEY:</label>
+                            <input type="password" id="keyInput" placeholder="ENTER_BASE64_KEY" required
+                                autocomplete="off">
+                        </div>
+
+                        <button type="submit" class="btn action-btn">INITIATE_DOWNLOAD</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <footer class="terminal">
+            <div class="terminal-header">SYS_LOGS</div>
+            <div class="terminal-body" id="termLog">
+                <div>> INITIATING SECURE CONNECTION...</div>
+                <div>> KEY EXCHANGE COMPLETE.</div>
+                <div>> WAITING FOR USER INPUT_</div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
