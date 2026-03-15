@@ -3,7 +3,6 @@ annotated-types==0.7.0
 anyio==4.12.1
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
--e git+https://github.com/harshvardhan-khachane/atomicvault.git@6166fb8f53e71198ef6df43b92a0157752d0e15c#egg=atomicvault
 certifi==2026.1.4
 cffi==2.0.0
 click==8.3.1
